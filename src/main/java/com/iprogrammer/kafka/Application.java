@@ -39,7 +39,7 @@ public class Application {
 
         ApplicationContext context = SpringApplication.run(Application.class);
 
-        createTopicIfNotExist(KAFKA_TARGET_TOPIC, ZOOKEEPER_IP + ":" + ZOOKEEPER_PORT, ZOOKEEPER_IP, KAFKA_PRODUCER_PORT);
+//        createTopicIfNotExist(KAFKA_TARGET_TOPIC, ZOOKEEPER_IP + ":" + ZOOKEEPER_PORT, ZOOKEEPER_IP, KAFKA_PRODUCER_PORT);
 
         Thread t1 = new Thread() {
             public void run() {
