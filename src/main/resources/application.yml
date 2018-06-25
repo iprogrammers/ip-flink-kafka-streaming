@@ -1,0 +1,14 @@
+server:
+  port: 8082
+
+# mongodb specific properties
+
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/local
+      database: local
+kafka:
+  bootstrap-servers: localhost:9092
+  topic:
+    helloworld: helloworld.t
