@@ -14,4 +14,5 @@ public class Oplog {
     private int t;
     private int v;
     private String ns;
+    private int partitionId;
 }

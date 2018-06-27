@@ -118,16 +118,16 @@ public class MongoDBOplogSource {
 //        LOGGER.info("sending payload='{}' to topic='{}'", payload, "helloworld.t}");
         kafkaTemplate.send("helloworld.t",payload);
 
-        FlinkKafkaProducer010<String> myProducer = new FlinkKafkaProducer010<String>(
+      /*  FlinkKafkaProducer010<String> myProducer = new FlinkKafkaProducer010<String>(
                 "localhost:9092",            // broker list
                 "helloworld.t",                  // target topic
                 new SimpleStringSchema());
-        myProducer.setWriteTimestampToKafka(true);
-        try {
+        myProducer.setWriteTimestampToKafka(true);*/
+        /*try {
             myProducer.invoke(payload);
         } catch (Exception e) {
             e.printStackTrace();
-        }
+        }*/
     }
 
     int delay=10001;
@@ -135,7 +135,6 @@ public class MongoDBOplogSource {
     private void bindPublisherToObservable(Entry<String, FindPublisher<Document>> oplogPublisher,
                                            ExecutorService executor, MongoCollection<Document> tsCollection) {
 
-        int delay = (5 + new Random().nextInt(5)) * 1000;
         RxReactiveStreams.toObservable(oplogPublisher.getValue())/*.delay(delay,TimeUnit.MILLISECONDS)*/
                 .subscribeOn(Schedulers.from(executor)).subscribe(t -> {
             try {
