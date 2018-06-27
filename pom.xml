@@ -13,6 +13,7 @@
         <flink.version>1.5.0</flink.version>
         <java.version>1.8</java.version>
         <scala.binary.version>2.11</scala.binary.version>
+
     </properties>
 
     <parent>
@@ -77,6 +78,13 @@
             <artifactId>flink-connector-kafka-0.10_${scala.binary.version}</artifactId>
             <version>${flink.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-runtime-web_2.11</artifactId>
+            <version>${flink.version}</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/io.reactivex/rxjava-reactive-streams -->
         <dependency>
             <groupId>io.reactivex</groupId>

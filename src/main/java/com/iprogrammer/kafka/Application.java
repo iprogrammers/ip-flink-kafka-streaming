@@ -7,6 +7,7 @@ import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
+import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -41,7 +42,7 @@ public class Application {
 
     private static final String ZOOKEEPER_IP = "127.0.0.1";
     private static final String ZOOKEEPER_PORT = "2181";
-    private static final String KAFKA_TARGET_TOPIC = "employees";
+    public static final String KAFKA_TOPIC = "helloworld.t";
     private static final String KAFKA_PRODUCER_PORT = "9092";
     private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
     static int counter = 1;
@@ -51,32 +52,6 @@ public class Application {
 
         ApplicationContext context = SpringApplication.run(Application.class);
 
-        try {
-            ScriptEngineManager manager = new ScriptEngineManager();
-            ScriptEngine engine = manager.getEngineByName("JavaScript");
-
-            // JavaScript code in a String. This code defines a script object 'obj'
-            // with one method called 'helo'.
-            String script = "var strTemp ='T1'; var strTemp1 = 'T2'; var strTemp2 = strTemp + strTemp1; " +
-                    "if(strTemp == 'T1') print('In If'); else print('In Else');" +
-                    "print('strTemp2 ', strTemp2);   var obj = new Object(); obj.hello = function(name) { print('Hello, ' + name); }";
-            // evaluate script
-            engine.eval(script);
-
-            // javax.script.Invocable is an optional interface.
-            // Check whether your script engine implements or not!
-            // Note that the JavaScript engine implements Invocable interface.
-            Invocable inv = (Invocable) engine;
-
-            // get script object on which we want to call the method
-            Object obj = engine.get("obj");
-
-            // invoke the method named "hello" on the script object "obj"
-            inv.invokeMethod(obj, "hello", "Script Method !!");
-        } catch (ScriptException e) {
-            // Shouldn't happen unless somebody breaks the script
-            throw new RuntimeException(e);
-        }
 //        createTopicIfNotExist(KAFKA_TARGET_TOPIC, ZOOKEEPER_IP + ":" + ZOOKEEPER_PORT, ZOOKEEPER_IP, KAFKA_PRODUCER_PORT);
 
         new Thread() {
@@ -93,7 +68,11 @@ public class Application {
         new Thread() {
             public void run() {
 
-                StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+                Configuration config = new Configuration();
+                config.setBoolean(ConfigConstants.LOCAL_START_WEBSERVER, true);
+
+                StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(config);
+             /*   StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();*/
                 env.enableCheckpointing(3000);
                 env.getConfig().disableSysoutLogging();
                 env.getConfig().setRestartStrategy(RestartStrategies.fixedDelayRestart(4, 10000));
@@ -105,7 +84,7 @@ public class Application {
                 properties.setProperty("group.id", "helloworld");
                 properties.setProperty(FlinkKafkaConsumerBase.KEY_PARTITION_DISCOVERY_INTERVAL_MILLIS, "60000");
 
-                FlinkKafkaConsumer010 kafkaConsumer = new FlinkKafkaConsumer010("helloworld.t", new KafkaEventOplogSchema(), properties);
+                FlinkKafkaConsumer010 kafkaConsumer = new FlinkKafkaConsumer010(KAFKA_TOPIC, new KafkaEventOplogSchema(), properties);
 
                 kafkaConsumer.assignTimestampsAndWatermarks(new BoundedOutOfOrdernessGenerator());
 
@@ -113,18 +92,6 @@ public class Application {
                         .addSource(kafkaConsumer)
                         .setParallelism(4);
 
-               /* DataStream<String> dataStream = streamSource.map(new MapFunction<Oplog, String>() {
-                    @Override
-                    public String map(Oplog value) throws Exception {
-
-                        BasicDBObject document = value.getO();
-
-                        if (document.get("SNO") != null)
-                            return (String) document.get("SNO");
-                        else return "";
-                    }
-                });
-*/
 
                 DataStream<Oplog> dataStream2 = streamSource.map(new MapFunction<Oplog, Oplog>() {
                     @Override
@@ -148,7 +115,7 @@ public class Application {
                     }
                 });
 
-                dataStream3.addSink(new MongoSink<Oplog>());
+//                dataStream3.addSink(new MongoSink<Oplog>());
 
                 DataStream<String> dataStream4 = dataStream3.map(new MapFunction<Oplog, String>() {
                     @Override
@@ -173,7 +140,7 @@ public class Application {
 //                dataStream.print();
 
                 try {
-                    env.execute("MongoDB Sharded OplogDTO Tail");
+                    env.execute("Flink MongoDB Streaming");
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

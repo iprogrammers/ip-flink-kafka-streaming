@@ -25,8 +25,10 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.reactivestreams.client.FindPublisher;
+import kafka.producer.KeyedMessage;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer010;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.bson.BsonTimestamp;
 import org.bson.Document;
 import org.slf4j.Logger;
@@ -116,8 +118,9 @@ public class MongoDBOplogSource {
 
     public void sendToKafka(String payload) {
 //        LOGGER.info("sending payload='{}' to topic='{}'", payload, "helloworld.t}");
-        kafkaTemplate.send("helloworld.t",payload);
-
+//        kafkaTemplate.send(Application.KAFKA_TOPIC,payload);
+        ProducerRecord<String, String> producerRecord = new ProducerRecord(Application.KAFKA_TOPIC, "amol", payload);
+        kafkaTemplate.send(producerRecord);
       /*  FlinkKafkaProducer010<String> myProducer = new FlinkKafkaProducer010<String>(
                 "localhost:9092",            // broker list
                 "helloworld.t",                  // target topic

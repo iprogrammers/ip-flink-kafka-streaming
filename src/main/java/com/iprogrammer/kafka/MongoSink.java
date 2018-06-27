@@ -5,6 +5,7 @@ import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
+import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,9 +25,10 @@ public class MongoSink<O> extends RichSinkFunction<Oplog> {
     private MongoCollection<Document> coll;
 
     @Override
-    public void invoke(Oplog value) {
+    public void invoke(Oplog value, Context context) throws Exception {
         LOGGER.info("oplog value: {}", value.getO());
-        mongoTemplate.insert(value.getO(), "tableA");
+       // mongoTemplate.insert(value.getO(), "tableA");
+        coll.insertOne(new Document(value.getO()));
     }
 
     @Override
@@ -39,12 +41,12 @@ public class MongoSink<O> extends RichSinkFunction<Oplog> {
         try {
             mongoClient = new MongoClient(uri);
             coll = mongoClient.getDatabase(uri.getDatabase())
-                    .getCollection(uri.getCollection());
+                    .getCollection("testCollection");
         } catch (Exception e) {
 
         } finally {
-            if (mongoClient != null)
-                mongoClient.close();
+           /* if (mongoClient != null)
+                mongoClient.close();*/
         }
 
 
