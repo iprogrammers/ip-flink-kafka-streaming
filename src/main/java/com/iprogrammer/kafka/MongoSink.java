@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class MongoSink<O> extends RichSinkFunction<BasicDBObject> {
 
+    private static final long serialVersionUID = 1905122041950251222L;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
 
     @Autowired
@@ -26,8 +28,6 @@ public class MongoSink<O> extends RichSinkFunction<BasicDBObject> {
 
     @Override
     public void invoke(BasicDBObject oplog, Context context) throws Exception {
-//        LOGGER.info("oplog value: {}", oplog.getO());
-        // mongoTemplate.insert(value.getO(), "tableA");
         ObjectMapper objectMapper = new ObjectMapper();
         Document document = Document.parse(objectMapper.writeValueAsString(oplog));
         coll.insertOne(document);
@@ -38,17 +38,12 @@ public class MongoSink<O> extends RichSinkFunction<BasicDBObject> {
         MongoClientURI uri = new MongoClientURI(
                 config.getString("mongo.output.uri",
                         "mongodb://localhost:27017/local"));
-        MongoClient mongoClient = null;
 
-        try {
-            mongoClient = new MongoClient(uri);
+        try (MongoClient mongoClient = new MongoClient(uri)) {
             coll = mongoClient.getDatabase(uri.getDatabase())
                     .getCollection("testCollection");
-        } catch (Exception e) {
-
-        } finally {
-           /* if (mongoClient != null)
-                mongoClient.close();*/
+        } catch (Exception ex) {
+            LOGGER.error("EXCEPTION: {}", ex);
         }
 
 

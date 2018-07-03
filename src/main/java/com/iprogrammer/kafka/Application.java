@@ -30,22 +30,20 @@ import java.util.Properties;
 public class Application {
 
     public static final String KAFKA_TOPIC = "helloworld.t";
-    private static final String ZOOKEEPER_IP = "127.0.0.1";
-    private static final String ZOOKEEPER_PORT = "2181";
-    private static final String KAFKA_PRODUCER_PORT = "9092";
     private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
-    static int counter = 1;
+
 
     @Autowired
     MongoTemplate mongoTemplate;
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
 
         ApplicationContext context = SpringApplication.run(Application.class);
 
 //        createTopicIfNotExist(KAFKA_TARGET_TOPIC, ZOOKEEPER_IP + ":" + ZOOKEEPER_PORT, ZOOKEEPER_IP, KAFKA_PRODUCER_PORT);
 
         new Thread() {
+            @Override
             public void run() {
                 try {
                     context.getBean(MongoDBOplogSource.class).run();
@@ -57,13 +55,14 @@ public class Application {
         }.start();
 
         new Thread() {
+            @Override
             public void run() {
 
                 Configuration config = new Configuration();
                 config.setBoolean(ConfigConstants.LOCAL_START_WEBSERVER, true);
 
                 StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(config);
-             /*   StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();*/
+
                 env.enableCheckpointing(3000);
                 env.getConfig().disableSysoutLogging();
                 env.getConfig().setRestartStrategy(RestartStrategies.fixedDelayRestart(4, 10000));
@@ -97,15 +96,13 @@ public class Application {
                         });
 
                 StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
-// Convert the DataStream into a Table with default fields "f0", "f1"
-                Table table1 = tableEnv.fromDataStream(streamSource);
 
+                Table table1 = tableEnv.fromDataStream(streamSource);
 
                 Table customerMISMaster = table1.filter("ns === 'analyticDB.customerMISMaster'").select("o as master, primaryKey");
                 Table customerMISChild1 = table1.filter("ns === 'analyticDB.customerMISChild1'").select("o  as child1, foreignKey");
                 Table customerMISChild2 = table1.filter("ns === 'analyticDB.customerMISChild2'").select("o  as child2, foreignKey as foreignKey2");
                 Table result = customerMISMaster.join(customerMISChild1).where("primaryKey==foreignKey").join(customerMISChild2).where("primaryKey==foreignKey2");
-
 
                 DataStream<Row> rowDataStream = tableEnv.toDataStream(result, Row.class);
 
@@ -118,52 +115,13 @@ public class Application {
                             basicDBObject.putAll(((BasicDBObject) row.getField(count)).toMap());
                         }
 
-                        if (basicDBObject != null)
-                            basicDBObject.remove("_class");
+
+                        basicDBObject.remove("_class");
                         return basicDBObject;
                     }
                 });
 
                 printStream.addSink(new MongoSink<BasicDBObject>());
-
-                DataStream<Oplog> dataStream2 = streamSource.map(new MapFunction<Oplog, Oplog>() {
-                    @Override
-                    public Oplog map(Oplog oplog) throws Exception {
-
-                        BasicDBObject document = oplog.getO();
-                        document.put("SNO", document.getString("SNO") + "AAA");
-                        oplog.setO(document);
-                        return oplog;
-                    }
-                });
-
-                DataStream<Oplog> dataStream3 = dataStream2.map(new MapFunction<Oplog, Oplog>() {
-                    @Override
-                    public Oplog map(Oplog oplog) throws Exception {
-
-                        BasicDBObject document = oplog.getO();
-                        document.put("SNO", document.getString("SNO") + "BBB");
-                        oplog.setO(document);
-                        return oplog;
-                    }
-                });
-
-//                dataStream3.addSink(new MongoSink<Oplog>());
-
-                DataStream<String> dataStream4 = dataStream3.map(new MapFunction<Oplog, String>() {
-                    @Override
-                    public String map(Oplog oplog) throws Exception {
-
-                        BasicDBObject document = oplog.getO();
-                        document.put("SNO", document.getString("SNO") + "CCC");
-                        oplog.setO(document);
-                        return oplog.getO().getString("SNO");
-                    }
-                });
-
-                //   dataStream4.print();
-
-//                dataStream.print();
 
                 try {
                     env.execute("Flink MongoDB Streaming");
