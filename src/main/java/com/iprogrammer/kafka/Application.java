@@ -2,9 +2,6 @@ package com.iprogrammer.kafka;
 
 import com.iprogrammer.kafka.utils.KafkaUtil;
 import com.mongodb.BasicDBObject;
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientURI;
-import com.mongodb.client.MongoCollection;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.configuration.ConfigConstants;
@@ -12,14 +9,12 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
-import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
-import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
-import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer010;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumerBase;
-import org.bson.Document;
+import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.java.StreamTableEnvironment;
+import org.apache.flink.types.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,26 +22,22 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.stereotype.Component;
 
-import javax.annotation.Nullable;
-import javax.script.Invocable;
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 import java.io.IOException;
 import java.util.Properties;
 
 @SpringBootApplication
 public class Application {
 
+    public static final String KAFKA_TOPIC = "helloworld.t";
     private static final String ZOOKEEPER_IP = "127.0.0.1";
     private static final String ZOOKEEPER_PORT = "2181";
-    public static final String KAFKA_TOPIC = "helloworld.t";
     private static final String KAFKA_PRODUCER_PORT = "9092";
     private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
     static int counter = 1;
 
+    @Autowired
+    MongoTemplate mongoTemplate;
 
     public static void main(String[] args) throws Exception {
 
@@ -90,8 +81,50 @@ public class Application {
 
                 DataStream<Oplog> streamSource = env
                         .addSource(kafkaConsumer)
-                        .setParallelism(4);
+                        .setParallelism(4).map(new MapFunction<Oplog, Oplog>() {
+                            @Override
+                            public Oplog map(Oplog oplog) throws Exception {
 
+                                if (oplog.getNs().equals("analyticDB.customerMISMaster")) {
+                                    oplog.setPrimaryKey(oplog.getO().getString("loanApplicationId"));
+                                } else if (oplog.getNs().equals("analyticDB.customerMISChild1")) {
+                                    oplog.setForeignKey(oplog.getO().getString("loanApplicationId"));
+                                } else if (oplog.getNs().equals("analyticDB.customerMISChild2")) {
+                                    oplog.setForeignKey(oplog.getO().getString("loanApplicationId"));
+                                }
+                                return oplog;
+                            }
+                        });
+
+                StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
+// Convert the DataStream into a Table with default fields "f0", "f1"
+                Table table1 = tableEnv.fromDataStream(streamSource);
+
+
+                Table customerMISMaster = table1.filter("ns === 'analyticDB.customerMISMaster'").select("o as master, primaryKey");
+                Table customerMISChild1 = table1.filter("ns === 'analyticDB.customerMISChild1'").select("o  as child1, foreignKey");
+                Table customerMISChild2 = table1.filter("ns === 'analyticDB.customerMISChild2'").select("o  as child2, foreignKey as foreignKey2");
+                Table result = customerMISMaster.join(customerMISChild1).where("primaryKey==foreignKey").join(customerMISChild2).where("primaryKey==foreignKey2");
+
+
+                DataStream<Row> rowDataStream = tableEnv.toDataStream(result, Row.class);
+
+                DataStream<BasicDBObject> printStream = rowDataStream.map(new MapFunction<Row, BasicDBObject>() {
+                    @Override
+                    public BasicDBObject map(Row row) throws Exception {
+
+                        BasicDBObject basicDBObject = new BasicDBObject();
+                        for (int count = 0; count < row.getArity(); count = count + 2) {
+                            basicDBObject.putAll(((BasicDBObject) row.getField(count)).toMap());
+                        }
+
+                        if (basicDBObject != null)
+                            basicDBObject.remove("_class");
+                        return basicDBObject;
+                    }
+                });
+
+                printStream.addSink(new MongoSink<BasicDBObject>());
 
                 DataStream<Oplog> dataStream2 = streamSource.map(new MapFunction<Oplog, Oplog>() {
                     @Override
@@ -121,14 +154,6 @@ public class Application {
                     @Override
                     public String map(Oplog oplog) throws Exception {
 
-
-                    /*    if (counter % 5 == 0 && oplog.getPartitionId() == 1) {
-                            int delay = (1 + new Random().nextInt(4)) * 100;
-                            Thread.sleep(delay);
-                        }
-*/
-//                        counter++;
-
                         BasicDBObject document = oplog.getO();
                         document.put("SNO", document.getString("SNO") + "CCC");
                         oplog.setO(document);
@@ -136,7 +161,8 @@ public class Application {
                     }
                 });
 
-                dataStream4.print();
+                //   dataStream4.print();
+
 //                dataStream.print();
 
                 try {
@@ -166,7 +192,6 @@ public class Application {
     public static long getTimeStamp(Oplog document) {
         return document.getTs().getValue() >> 32;
     }
-
 
 
 }

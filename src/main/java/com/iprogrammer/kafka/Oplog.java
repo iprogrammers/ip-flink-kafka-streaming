@@ -10,6 +10,8 @@ public class Oplog {
 
     private OplogTimestamp ts;
     private String op;
+    private String primaryKey;
+    private String foreignKey;
     private BasicDBObject o;
     private int t;
     private int v;

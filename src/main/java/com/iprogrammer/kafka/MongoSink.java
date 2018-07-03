@@ -1,21 +1,21 @@
 package com.iprogrammer.kafka;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
-import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 @Service
-public class MongoSink<O> extends RichSinkFunction<Oplog> {
+public class MongoSink<O> extends RichSinkFunction<BasicDBObject> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
 
@@ -25,10 +25,12 @@ public class MongoSink<O> extends RichSinkFunction<Oplog> {
     private MongoCollection<Document> coll;
 
     @Override
-    public void invoke(Oplog value, Context context) throws Exception {
-        LOGGER.info("oplog value: {}", value.getO());
-       // mongoTemplate.insert(value.getO(), "tableA");
-        coll.insertOne(new Document(value.getO()));
+    public void invoke(BasicDBObject oplog, Context context) throws Exception {
+//        LOGGER.info("oplog value: {}", oplog.getO());
+        // mongoTemplate.insert(value.getO(), "tableA");
+        ObjectMapper objectMapper = new ObjectMapper();
+        Document document = Document.parse(objectMapper.writeValueAsString(oplog));
+        coll.insertOne(document);
     }
 
     @Override
