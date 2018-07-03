@@ -115,7 +115,6 @@ public class Application {
                             basicDBObject.putAll(((BasicDBObject) row.getField(count)).toMap());
                         }
 
-
                         basicDBObject.remove("_class");
                         return basicDBObject;
                     }
