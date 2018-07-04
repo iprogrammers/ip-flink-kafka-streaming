@@ -33,7 +33,7 @@ public class SenderConfig {
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 StringSerializer.class);
 
-//        props.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, KafkaCustomPatitioner.class.getName());
+        props.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, KafkaCustomPatitioner.class.getName());
 
         return props;
     }

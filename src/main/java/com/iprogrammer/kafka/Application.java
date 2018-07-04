@@ -58,6 +58,7 @@ public class Application {
             @Override
             public void run() {
 
+               // KafkaCustomPatitioner.getNumericReferenceNumber("ABC123");
                 Configuration config = new Configuration();
                 config.setBoolean(ConfigConstants.LOCAL_START_WEBSERVER, true);
 
@@ -102,6 +103,7 @@ public class Application {
                 Table customerMISMaster = table1.filter("ns === 'analyticDB.customerMISMaster'").select("o as master, primaryKey");
                 Table customerMISChild1 = table1.filter("ns === 'analyticDB.customerMISChild1'").select("o  as child1, foreignKey");
                 Table customerMISChild2 = table1.filter("ns === 'analyticDB.customerMISChild2'").select("o  as child2, foreignKey as foreignKey2");
+
                 Table result = customerMISMaster.join(customerMISChild1).where("primaryKey==foreignKey").join(customerMISChild2).where("primaryKey==foreignKey2");
 
                 DataStream<Row> rowDataStream = tableEnv.toDataStream(result, Row.class);
