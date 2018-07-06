@@ -25,10 +25,6 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.reactivestreams.client.FindPublisher;
-import kafka.producer.KeyedMessage;
-import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer010;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.bson.BsonTimestamp;
 import org.bson.Document;
 import org.slf4j.Logger;
@@ -38,26 +34,30 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import rx.RxReactiveStreams;
 import rx.schedulers.Schedulers;
+
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.iprogrammer.kafka.MongoDBConstants.OPLOG_ID;
 import static com.iprogrammer.kafka.MongoDBConstants.OPLOG_TIMESTAMP;
+import static com.iprogrammer.kafka.StreamingOperations.KAFKA_TOPIC;
 
 @Component
 public class MongoDBOplogSource {
 
-    private static final long serialVersionUID = 1140284841495470127L;
+
     private final String host = "localhost";
     private final int port = 27017;
     private final Logger LOGGER = LoggerFactory.getLogger(this.getClass().getName());
     ConcurrentMap<Long, AtomicInteger> documentCounter = new ConcurrentHashMap<Long, AtomicInteger>();
     MongoCollection<Document> tsCollection;
+    @Autowired
+    ObjectMapper objectMapper;
+    int delay = 10001;
     private volatile boolean isRunning = true;
-    private BlockingQueue<Document> opsQueue = new ArrayBlockingQueue<Document>(128);
+    private BlockingQueue<Document> opsQueue = new ArrayBlockingQueue<Document>(50);
     private Integer replicaDepth;
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
@@ -65,8 +65,6 @@ public class MongoDBOplogSource {
     public MongoDBOplogSource() {
     }
 
-    @Autowired
-    ObjectMapper objectMapper;
     public void run() throws Exception {
 
         try (MongoClient mongoClient = new MongoClient(host, port)) {
@@ -94,16 +92,8 @@ public class MongoDBOplogSource {
                 if (operation == null)
                     continue;
 
-                Oplog oplog=objectMapper.convertValue(operation,Oplog.class);
-//                oplog.setTimeStamp(oplog.getTs().getValue());
-              /*  OplogDTO oplogDTO=new OplogDTO();
-                oplogDTO.setTs(oplog.getTs().getValue());
-                oplogDTO.setO(oplog.getO());
-                oplogDTO.setOp(oplog.getOp());
-*/
+                Oplog oplog = objectMapper.convertValue(operation, Oplog.class);
 
-
-//                sendToKafka(oplog.toString());
                 sendToKafka(new ObjectMapper().writeValueAsString(oplog));
 
             }
@@ -118,9 +108,9 @@ public class MongoDBOplogSource {
 
     public void sendToKafka(String payload) {
 //        LOGGER.info("sending payload='{}' to topic='{}'", payload, "helloworld.t}");
-//        kafkaTemplate.send(Application.KAFKA_TOPIC,payload);
-        ProducerRecord<String, String> producerRecord = new ProducerRecord(Application.KAFKA_TOPIC, "amol", payload);
-        kafkaTemplate.send(producerRecord);
+        kafkaTemplate.send(KAFKA_TOPIC, payload);
+//        ProducerRecord<String, String> producerRecord = new ProducerRecord(KAFKA_TOPIC, "amol", payload);
+//        kafkaTemplate.send(payload);
       /*  FlinkKafkaProducer010<String> myProducer = new FlinkKafkaProducer010<String>(
                 "localhost:9092",            // broker list
                 "helloworld.t",                  // target topic
@@ -133,12 +123,10 @@ public class MongoDBOplogSource {
         }*/
     }
 
-    int delay=10001;
-
     private void bindPublisherToObservable(Entry<String, FindPublisher<Document>> oplogPublisher,
                                            ExecutorService executor, MongoCollection<Document> tsCollection) {
 
-        RxReactiveStreams.toObservable(oplogPublisher.getValue())/*.delay(delay,TimeUnit.MILLISECONDS)*/
+        RxReactiveStreams.toObservable(oplogPublisher.getValue())
                 .subscribeOn(Schedulers.from(executor)).subscribe(t -> {
             try {
                 isRunning = true;

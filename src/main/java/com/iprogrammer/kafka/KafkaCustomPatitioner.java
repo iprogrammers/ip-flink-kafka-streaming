@@ -13,7 +13,7 @@ public class KafkaCustomPatitioner implements Partitioner {
 
     public static Long getNumericReferenceNumber(String str) {
 
-        String result = "";
+        long result = 0;
 
         for (int i = 0; i < str.length(); i++) {
 
@@ -21,11 +21,11 @@ public class KafkaCustomPatitioner implements Partitioner {
 
             if (Character.isLetter(ch)) {
                 char initialCharacter = Character.isUpperCase(ch) ? 'A' : 'a';
-                result = result.concat(String.valueOf((ch - initialCharacter + 1)));
+                result = result+(ch - initialCharacter + 1);
             } else result = result + ch;
         }
 
-        return Long.parseLong(result);
+        return result;
     }
 
     @Override
@@ -35,9 +35,10 @@ public class KafkaCustomPatitioner implements Partitioner {
         int randomPartition = 0;
 
         try {
+
             Oplog oplog = new ObjectMapper().readValue(value.toString(), Oplog.class);
 
-            if (oplog.getO().get("SNO") != null) {
+            if (oplog.getO() != null && oplog.getO().get("SNO") != null) {
 
                 int sno = Integer.parseInt(oplog.getO().getString("SNO"));
 
@@ -45,6 +46,10 @@ public class KafkaCustomPatitioner implements Partitioner {
                     return 0;
                 } else
                     return sno / 500;
+            } else if (oplog.getO() != null && oplog.getO().get("_id") != null) {
+
+                long number = getNumericReferenceNumber(oplog.getO().get("_id").toString());
+                return (int) number % 10;
             }
         } catch (IOException e) {
             e.printStackTrace();
