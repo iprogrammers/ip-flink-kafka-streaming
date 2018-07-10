@@ -20,14 +20,12 @@ public class StreamingConfigController {
     StreamingConfigService streamingConfigService;
 
     @GetMapping(URLEndPoints.GET_COLLECTION_NAMES)
-    public ResponseEntity<Response> getCollectionNames(@RequestParam(value = "databaseName") String databaseName) {
-
-        return new ResponseEntity(streamingConfigService.getCollectionNames(databaseName),
+    public ResponseEntity<Response> getCollectionNames() {
+        return new ResponseEntity(streamingConfigService.getCollectionNames(),
                 HttpStatus.OK);
-
     }
 
-    @GetMapping()
+    @GetMapping(URLEndPoints.GET_COLLECTION_FIELDS)
     public ResponseEntity<Response> getFieldsFromCollection(@RequestParam(value = "collectionName") String collectionName) {
         return new ResponseEntity(streamingConfigService.getFieldsFromCollection(collectionName),
                 HttpStatus.OK);

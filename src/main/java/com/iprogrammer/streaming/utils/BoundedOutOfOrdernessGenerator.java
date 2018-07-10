@@ -8,7 +8,7 @@ import org.apache.flink.streaming.api.watermark.Watermark;
 
 public class BoundedOutOfOrdernessGenerator implements AssignerWithPeriodicWatermarks<Oplog> {
 
-    private final long maxOutOfOrderness = 3500; // 3.5 seconds
+    private static final long MAX_OUT_OF_ORDERNESS = 3500; // 3.5 seconds
 
     private long currentMaxTimestamp;
 
@@ -21,6 +21,6 @@ public class BoundedOutOfOrdernessGenerator implements AssignerWithPeriodicWater
     @Override
     public Watermark getCurrentWatermark() {
         // return the watermark as current highest timestamp minus the out-of-orderness bound
-        return new Watermark(currentMaxTimestamp - maxOutOfOrderness);
+        return new Watermark(currentMaxTimestamp - MAX_OUT_OF_ORDERNESS);
     }
 }

@@ -1,7 +1,11 @@
 package com.iprogrammer.streaming.utils;
 
 public class Constant {
-    public static String LOAN_APPLICATION_ID="loanApplicationId";
+    private Constant() {
+        throw new IllegalStateException("Constant class");
+    }
+
+    public static final String LOAN_APPLICATION_ID="loanApplicationId";
     public static final String TECHNICAL_ERROR = "TECHINCAL ERROR OCCURED PLEASE CONTACT TO SERVICE PROVIDER.";
     public static final String REPORTS = "reports";
     public static final String TYPE = "type";

@@ -1,8 +1,6 @@
 package com.iprogrammer.streaming.repository;
 
 import com.iprogrammer.streaming.utils.Constant;
-import com.iprogrammer.streaming.utils.Utils;
-import com.mongodb.MongoClient;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -19,18 +17,10 @@ public class StreamingOperationsRepository {
     @Autowired
     MongoTemplate mongoTemplate;
 
-    public Set<String> getCollectionNames(String databaseName) {
-        try (MongoClient mongoClient = new MongoClient("localhost", 27017)) {
-            return Utils.getSettypeFromMongoIterable(mongoClient.getDatabase(databaseName).listCollectionNames());
-        }
-    }
-
-    public Set<String> getDatabaseNames() {
-
-        try (MongoClient mongoClient = new MongoClient("localhost", 27017)) {
-            return Utils.getSettypeFromMongoIterable(mongoClient.listDatabaseNames());
-        }
-
+    public Set getCollectionNames() {
+        Set collectionNames = new TreeSet(String.CASE_INSENSITIVE_ORDER);
+        collectionNames.addAll(mongoTemplate.getCollectionNames());
+        return collectionNames;
     }
 
     public List getCollectionFields(String collectionName) {

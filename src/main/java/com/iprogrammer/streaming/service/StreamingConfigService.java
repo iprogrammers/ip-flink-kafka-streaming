@@ -23,12 +23,12 @@ public class StreamingConfigService {
     @Autowired
     StreamingOperationsRepository streamingOperationsRepository;
 
-    public Response getCollectionNames(String databaseName) {
+    public Response getCollectionNames() {
 
         Response.Builder builder = new Response.Builder();
 
         try {
-            Set<String> collectionNames = streamingOperationsRepository.getCollectionNames(databaseName);
+            Set<String> collectionNames = streamingOperationsRepository.getCollectionNames();
 
             Map data = new HashMap();
 
@@ -39,8 +39,6 @@ public class StreamingConfigService {
                 data.put("collectionNames", collectionNames);
                 data.put("defaultCollection", collectionName);
                 data.put("fields", collectionFields);
-                data.put("databaseName",databaseName);
-
             }
 
             if (collectionNames != null)
