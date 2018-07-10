@@ -6,8 +6,8 @@ server:
 spring:
   data:
     mongodb:
-      uri: mongodb://localhost:27017/analyticDB
-      database: analyticDB
+      uri: mongodb://localhost:27017/gonogo_analytics_config
+      database: gonogo_analytics_config
 kafka:
   bootstrap-servers: localhost:9092
   topic:
