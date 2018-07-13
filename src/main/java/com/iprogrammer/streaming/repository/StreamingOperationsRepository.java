@@ -1,5 +1,6 @@
 package com.iprogrammer.streaming.repository;
 
+import com.iprogrammer.streaming.model.StreamingConfig;
 import com.iprogrammer.streaming.utils.Constant;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
@@ -14,6 +15,7 @@ import java.util.*;
 @Repository
 public class StreamingOperationsRepository {
 
+    private static final String FIELD_SEPERATOR = ".";
     @Autowired
     MongoTemplate mongoTemplate;
 
@@ -23,17 +25,27 @@ public class StreamingOperationsRepository {
         return collectionNames;
     }
 
-    public List getCollectionFields(String collectionName) {
+    public Map getCollectionFields(String collectionName) {
 
         Document dbObject = mongoTemplate.findOne(new Query(), Document.class, collectionName);
 
-        List<Map> dataDictionary = new ArrayList();
+        Map<String, String> keyValues = new LinkedHashMap();
+
+        getKeyValuesFromDocument("", dbObject, keyValues);
+
+        return keyValues;
+    }
+
+    void getKeyValuesFromDocument(String prefix, Document dbObject, Map<String, String> keyValues) {
+
+        boolean isInitialIteration = true;
+
+        if (StringUtils.isNotEmpty(prefix))
+            isInitialIteration = false;
 
         if (dbObject != null) {
 
             Set<String> keyset = dbObject.keySet();
-
-            HashMap keyValues;
 
             if (keyset != null && keyset.contains("_class")) {
                 keyset.remove("_class");
@@ -41,37 +53,73 @@ public class StreamingOperationsRepository {
 
             for (String key : keyset) {
 
-                if (StringUtils.isNotEmpty(key)) {
+                if (isInitialIteration)
+                    prefix = "";
 
-                    keyValues = new HashMap();
+                if (StringUtils.isNotEmpty(prefix) && !prefix.endsWith(FIELD_SEPERATOR))
+                    prefix = prefix + FIELD_SEPERATOR;
+
+                if (StringUtils.isNotEmpty(key)) {
 
                     Object value = dbObject.get(key);
 
-                    String displayParameter = StringUtils.join(
-                            StringUtils.splitByCharacterTypeCamelCase(StringUtils.capitalize(key)),
-                            ' '
-                    );
+                    String type = getType(value);
 
-                    keyValues.put("actualParameter", key);
-                    keyValues.put("displayParameter", displayParameter);
+                    if (!type.equals(Constant.OBJECT)) {
+                        keyValues.put(prefix + key, type);
+                    }
 
+                    if (value instanceof Document) {
 
-                    if (value == null || value.equals("") || value instanceof String)
-                        keyValues.put(Constant.TYPE, Constant.STRING);
-                    else if (value instanceof Double || value instanceof Integer || value instanceof Long)
-                        keyValues.put(Constant.TYPE, Constant.INT);
-                    else if (value instanceof Date)
-                        keyValues.put(Constant.TYPE, Constant.DATE);
-                    else if (value instanceof Boolean)
-                        keyValues.put(Constant.TYPE, Constant.BOOLEAN);
-                    else if (value instanceof ObjectId)
-                        keyValues.put(Constant.TYPE, Constant.OBJECT_ID);
-                    dataDictionary.add(keyValues);
+                        if (StringUtils.isNotEmpty(prefix) && !prefix.endsWith(FIELD_SEPERATOR))
+                            prefix = prefix + FIELD_SEPERATOR;
+
+                        getKeyValuesFromDocument(prefix + key + FIELD_SEPERATOR, (Document) value, keyValues);
+
+                    } else if (value instanceof List) {
+
+                        List arrDocuments = ((List) value);
+
+                        for (int i = 0; i < arrDocuments.size(); i++) {
+
+                            if (arrDocuments.get(i) instanceof Document) {
+
+                                if (i == 0) {
+
+                                    if (StringUtils.isNotEmpty(prefix) && !prefix.endsWith(FIELD_SEPERATOR))
+                                        prefix = prefix + FIELD_SEPERATOR;
+
+                                }
+
+                                getKeyValuesFromDocument(prefix + key + FIELD_SEPERATOR, (Document) arrDocuments.get(i), keyValues);
+                            }
+                        }
+                    }
+
                 }
+
             }
 
         }
 
-        return dataDictionary;
+    }
+
+
+    String getType(Object value) {
+        if (value == null || value.equals("") || value instanceof String)
+            return Constant.STRING;
+        else if (value instanceof Double || value instanceof Integer || value instanceof Long)
+            return Constant.INT;
+        else if (value instanceof Date)
+            return Constant.DATE;
+        else if (value instanceof Boolean)
+            return Constant.BOOLEAN;
+        else if (value instanceof ObjectId)
+            return Constant.OBJECT_ID;
+        else return Constant.OBJECT;
+    }
+
+    public void saveStreamingConfig(StreamingConfig streamingConfig) {
+        mongoTemplate.save(streamingConfig);
     }
 }

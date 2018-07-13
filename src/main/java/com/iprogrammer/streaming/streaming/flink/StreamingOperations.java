@@ -20,6 +20,7 @@ import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumerBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.http.HttpStatus;
@@ -42,6 +43,9 @@ public class StreamingOperations {
 
     @Autowired
     MongoTemplate mongoTemplate;
+
+    @Value("${spring.data.mongodb.database}")
+    private String mongoDbName;
 
     static int getNumberOfPartitions() {
         try (KafkaUtil kafkaTopicService = new KafkaUtil(ZOOKEEPER_IP + ":" + ZOOKEEPER_PORT, ZOOKEEPER_IP, KAFKA_PRODUCER_PORT, 6000, 6000)) {

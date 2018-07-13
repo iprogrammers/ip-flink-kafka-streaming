@@ -1,5 +1,6 @@
 package com.iprogrammer.streaming.service;
 
+import com.iprogrammer.streaming.model.StreamingConfig;
 import com.iprogrammer.streaming.model.response.Response;
 import com.iprogrammer.streaming.repository.StreamingOperationsRepository;
 import com.iprogrammer.streaming.utils.Utils;
@@ -34,7 +35,7 @@ public class StreamingConfigService {
 
             if (!CollectionUtils.isEmpty(collectionNames)) {
                 String collectionName = collectionNames.iterator().next();
-                List collectionFields = streamingOperationsRepository.getCollectionFields(collectionName);
+                Map collectionFields = streamingOperationsRepository.getCollectionFields(collectionName);
 
                 data.put("collectionNames", collectionNames);
                 data.put("defaultCollection", collectionName);
@@ -58,12 +59,27 @@ public class StreamingConfigService {
 
         try {
 
-            List collectionFields = streamingOperationsRepository.getCollectionFields(collectionName);
+            Map collectionFields = streamingOperationsRepository.getCollectionFields(collectionName);
 
             if (collectionFields != null)
                 return Utils.getSuccessResponseWithData(builder, collectionFields);
 
             return Utils.getFailedResponseStatus(builder);
+
+        } catch (Exception ex) {
+            logger.error(HttpStatus.FAILED_DEPENDENCY.name(), ex);
+            return Utils.getFailedResponseStatus(builder);
+        }
+    }
+
+    public Response createStreamingConfig(StreamingConfig streamingConfig) {
+
+        Response.Builder builder = new Response.Builder();
+
+        try {
+
+            streamingOperationsRepository.saveStreamingConfig(streamingConfig);
+            return Utils.getSuccessResponseWithData(builder, streamingConfig);
 
         } catch (Exception ex) {
             logger.error(HttpStatus.FAILED_DEPENDENCY.name(), ex);
