@@ -7,8 +7,6 @@ public class FieldConfig {
 
     private String actualParameter;
     private String collectionName;
-    private String collectionPrefix;
-    private String displayParameter;
     private String expression;
     private int index;
     private boolean isExpressionEnabled;

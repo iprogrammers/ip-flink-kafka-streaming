@@ -3,9 +3,9 @@ package com.softcell.rest.service;
 
 import com.softcell.domains.StreamingConfig;
 import com.softcell.domains.response.Response;
-
 import com.softcell.persistance.StreamingOperationsRepository;
 import com.softcell.rest.utils.Utils;
+import com.softcell.utils.Constant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,8 +80,17 @@ public class StreamingConfigService {
 
         try {
 
-            streamingOperationsRepository.saveStreamingConfig(streamingConfig);
-            return Utils.getSuccessResponseWithData(builder, streamingConfig);
+            String isValidRelationship = streamingOperationsRepository.isValidRelationshipExists(streamingConfig);
+
+            if (!isValidRelationship.equals(Constant.SUCCESS)) {
+                return Utils.getFailedResponseStatus(builder, isValidRelationship);
+            }
+
+            if (streamingOperationsRepository.getStreamingConfigDetailsByName(streamingConfig.getName()) == null) {
+                streamingOperationsRepository.saveStreamingConfig(streamingConfig);
+                return Utils.getSuccessResponseWithData(builder, streamingConfig);
+            } else
+                return Utils.getFailedResponseStatus(builder, Constant.DUPLICATE_STREAMING_CONFIG_NAME);
 
         } catch (Exception ex) {
             logger.error(HttpStatus.FAILED_DEPENDENCY.name(), ex);
@@ -95,9 +104,7 @@ public class StreamingConfigService {
 
         try {
 
-
-
-            streamingOperationsRepository.saveStreamingConfig(streamingConfig);
+            streamingOperationsRepository.updateStreamingConfig(streamingConfig);
             return Utils.getSuccessResponseWithData(builder, streamingConfig);
 
         } catch (Exception ex) {

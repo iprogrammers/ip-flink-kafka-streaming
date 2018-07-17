@@ -1,6 +1,8 @@
 package com.softcell.persistance;
 
 
+import com.mongodb.BasicDBObject;
+import com.softcell.domains.FieldConfig;
 import com.softcell.domains.StreamingConfig;
 import com.softcell.utils.Constant;
 import org.apache.commons.lang3.StringUtils;
@@ -8,11 +10,18 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
+import org.springframework.data.mongodb.core.aggregation.LimitOperation;
+import org.springframework.data.mongodb.core.aggregation.LookupOperation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.CollectionUtils;
 
 import java.util.*;
+
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.unwind;
 
 @Repository
 public class StreamingOperationsRepository {
@@ -126,10 +135,94 @@ public class StreamingOperationsRepository {
         mongoTemplate.save(streamingConfig);
     }
 
+    public void updateStreamingConfig(StreamingConfig streamingConfig) {
+
+        StreamingConfig existingRecord = getStreamingConfigDetails(streamingConfig.getId());
+
+        if (existingRecord != null) {
+            String id = existingRecord.getId();
+            long version = existingRecord.getVersion();
+            existingRecord = streamingConfig;
+            existingRecord.setId(id);
+            existingRecord.setVersion(version);
+            saveStreamingConfig(streamingConfig);
+        }
+    }
+
     public StreamingConfig getStreamingConfigDetails(String id) {
         Query query = new Query();
         query.addCriteria(Criteria.where(Constant.DOCUMENT_ID).is(id));
         return mongoTemplate.findOne(query, StreamingConfig.class, "streamingConfig");
+    }
+
+    public StreamingConfig getStreamingConfigDetailsByName(String name) {
+        Query query = new Query();
+        query.addCriteria(Criteria.where(Constant.NAME).is(name));
+        return mongoTemplate.findOne(query, StreamingConfig.class, "streamingConfig");
+    }
+
+    public String isValidRelationshipExists(StreamingConfig streamingConfig) {
+
+        if (streamingConfig.getFields() != null && streamingConfig.getFields().size() > 1 && streamingConfig.getFields().containsKey(streamingConfig.getName()))
+            streamingConfig.getFields().remove(streamingConfig.getName());
+
+        int numberOfCollections = streamingConfig.getFields().size();
+
+        if (numberOfCollections <= 1)
+            return Constant.SUCCESS;
+
+        FieldConfig primaryCollection = null;
+
+        List<FieldConfig> foreignKeys = new ArrayList<>();
+
+        for (Map.Entry<String, List<FieldConfig>> entry : streamingConfig.getFields().entrySet()) {
+
+            Optional<FieldConfig> primaryCollectionOptional = entry.getValue().stream().filter(FieldConfig::isPrimaryKey).findFirst();
+
+            Optional<FieldConfig> foreignCollectionOptional = entry.getValue().stream().filter(FieldConfig::isForeignKey).findFirst();
+
+            if (primaryCollectionOptional.isPresent())
+                primaryCollection = primaryCollectionOptional.get();
+            else if (foreignCollectionOptional.isPresent())
+                foreignKeys.add(foreignCollectionOptional.get());
+        }
+
+        if (primaryCollection == null)
+            return Constant.PRIMARY_KEY_NOT_FOUND_EXCEPTION;
+
+        if (foreignKeys.size() != numberOfCollections - 1)
+            return Constant.FOREIGN_KEY_NOT_FOUND_EXCEPTION;
+
+        List<AggregationOperation> lookupOperationList = new LinkedList<>();
+
+        LookupOperation lookupOperation;
+
+        for (FieldConfig fieldConfig : foreignKeys) {
+
+            lookupOperation = LookupOperation.newLookup().
+                    from(fieldConfig.getCollectionName()).
+                    localField(primaryCollection.getActualParameter()).
+                    foreignField(fieldConfig.getActualParameter()).
+                    as(fieldConfig.getCollectionName());
+
+            lookupOperationList.add(lookupOperation);
+
+            lookupOperationList.add(unwind(fieldConfig.getCollectionName()));
+        }
+
+
+        LimitOperation limitOperation = new LimitOperation(1);
+
+        lookupOperationList.add(limitOperation);
+
+        Aggregation aggregation = Aggregation.newAggregation(lookupOperationList);
+
+        List<BasicDBObject> basicDBObjectList = mongoTemplate.aggregate(aggregation, primaryCollection.getCollectionName(), BasicDBObject.class).getMappedResults();
+
+        if (!CollectionUtils.isEmpty(basicDBObjectList))
+            return Constant.SUCCESS;
+        else
+            return Constant.INVALID_RELATIONSHIP_EXCEPTION;
     }
 
     public List<StreamingConfig> getStreamingConfigList() {

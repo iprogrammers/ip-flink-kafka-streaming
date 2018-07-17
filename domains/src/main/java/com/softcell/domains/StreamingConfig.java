@@ -11,7 +11,7 @@ import java.util.Map;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class StreamingConfig extends AuditEntity {
+public class StreamingConfig extends AuditEntity{
 
     @Id
     private String id;

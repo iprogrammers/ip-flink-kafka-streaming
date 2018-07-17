@@ -7,11 +7,12 @@ public class Constant {
 
     public static final String LOAN_APPLICATION_ID="loanApplicationId";
     public static final String TECHNICAL_ERROR = "TECHINCAL ERROR OCCURED PLEASE CONTACT TO SERVICE PROVIDER.";
+    public static final String DUPLICATE_STREAMING_CONFIG_NAME="Please create config with another name.";
+    public static final String PRIMARY_KEY_NOT_FOUND_EXCEPTION="Primary key not found";
+    public static final String FOREIGN_KEY_NOT_FOUND_EXCEPTION="Please ensure if any foreign key is missing";
+    public static final String INVALID_RELATIONSHIP_EXCEPTION = "Invalid relationship found between given collections";
     public static final String REPORTS = "reports";
-    public static final String TYPE = "type";
-    public static final String DATABASE_NAME = "type";
-    public static final String ACTUAL_PARAMETER="actualParameter";
-    public static final String DISPLAY_PARAMETER= "displayParameter";
+
     //Data types
     public static final String STRING = "String";
     public static final String INT = "Int";
@@ -22,8 +23,11 @@ public class Constant {
     public static final String OBJECT = "Object";
 
     public static final String DOCUMENT_ID = "_id";
-
+    public static final String NAME = "name";
+    public static final String SUCCESS = "success";
+    public static final String DERIVED_COLLECTION="derivedCollection";
     //Exception Messages
+
 
 
 
