@@ -1,6 +1,7 @@
 package com.softcell.rest.service;
 
 
+import com.softcell.domains.JavaScript;
 import com.softcell.domains.StreamingConfig;
 import com.softcell.domains.response.Response;
 import com.softcell.persistance.StreamingOperationsRepository;
@@ -149,6 +150,25 @@ public class StreamingConfigService {
         } catch (Exception ex) {
             logger.error(HttpStatus.FAILED_DEPENDENCY.name(), ex);
             return Utils.getFailedResponseStatus(builder);
+        }
+    }
+
+    public Response testJavascript(JavaScript script) {
+
+        Response.Builder builder = new Response.Builder();
+
+        try {
+
+            Object result = Utils.runJavascripCode(script);
+
+            if (result != null)
+                return Utils.getSuccessResponseWithData(builder, result);
+            else
+                return Utils.getFailedResponseStatus(builder, "Something went wrong.");
+
+        } catch (Exception ex) {
+            logger.error(HttpStatus.FAILED_DEPENDENCY.name(), ex);
+            return Utils.getFailedResponseStatus(builder,ex.getMessage());
         }
     }
 }

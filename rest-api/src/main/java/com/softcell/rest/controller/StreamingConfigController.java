@@ -1,6 +1,7 @@
 package com.softcell.rest.controller;
 
 
+import com.softcell.domains.JavaScript;
 import com.softcell.domains.StreamingConfig;
 import com.softcell.domains.response.Response;
 import com.softcell.rest.service.StreamingConfigService;
@@ -11,6 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping(value = Constant.REPORTS)
@@ -48,4 +52,17 @@ public class StreamingConfigController {
     public ResponseEntity<Response> updateStreamingCofig(@RequestBody StreamingConfig streamingConfig) {
         return new ResponseEntity(streamingConfigService.updateStreamingConfig(streamingConfig), HttpStatus.OK);
     }
+
+    @PostMapping(URLEndPoints.TEST_JAVASCRIPT)
+    public ResponseEntity<Response> testJavascript(@RequestBody JavaScript script) {
+        return new ResponseEntity(streamingConfigService.testJavascript(script), HttpStatus.OK);
+    }
+
+
+    @PostMapping("test")
+    public void testmethod(@RequestBody Map<String,Map> streamingConfigMetadata) {
+        System.out.println("request:"+ streamingConfigMetadata);
+        //return new ResponseEntity(streamingConfigService.testJavascript(script), HttpStatus.OK);
+    }
+
 }

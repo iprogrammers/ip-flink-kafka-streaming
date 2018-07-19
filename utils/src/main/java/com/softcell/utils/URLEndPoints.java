@@ -13,4 +13,6 @@ public class URLEndPoints {
     public static final String GET_STREAMING_CONFIG_LIST ="get-streaming-config-list";
     public static final String UPDATE_STREAMING_CONFIG ="update-streaming-config";
 
+    public static final String TEST_JAVASCRIPT ="test-javascript";
+
 }
