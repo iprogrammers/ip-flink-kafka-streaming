@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.softcell.streaming</groupId>
-    <artifactId>ip-flink-kafka-streaming</artifactId>
+    <artifactId>cyod</artifactId>
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
 

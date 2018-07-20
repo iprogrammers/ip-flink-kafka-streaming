@@ -29,16 +29,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
+
+import static com.softcell.utils.Constant.*;
 
 @Service
 public class StreamingOperations {
 
-    public static final String KAFKA_TOPIC = "helloworld.t";
-    public static final String ZOOKEEPER_PORT = "2181";
-    public static final int KAFKA_PRODUCER_PORT = 9092;
-    public static final String ZOOKEEPER_IP = "localhost";
-    static int count = 0;
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
@@ -114,6 +113,11 @@ public class StreamingOperations {
 
                 logger.debug("metadata: {}", StreamingConfigService.streamingConfigMeta);
 
+
+                List list=new ArrayList();
+                if (list.contains("")){
+
+                }
                 DataStream<Oplog> streamSource = env
                         .addSource(kafkaConsumer)
                         .setParallelism(10).map(new MapFunction<Oplog, Oplog>() {
@@ -189,7 +193,7 @@ public class StreamingOperations {
                 gonogoCustomerApplicationStream.addSink(mongoSink);
 
                 try {
-                    env.execute("Flink MongoDB Streaming");
+                    env.execute("CYOD");
                 } catch (Exception ex) {
                     logger.error(HttpStatus.FAILED_DEPENDENCY.name(), ex);
                 }

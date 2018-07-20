@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.softcell.domains.MongoDBConstants.OPLOG_ID;
 import static com.softcell.domains.MongoDBConstants.OPLOG_TIMESTAMP;
-import static com.softcell.streaming.flink.StreamingOperations.KAFKA_TOPIC;
+import static com.softcell.utils.Constant.KAFKA_TOPIC;
 
 @Component
 public class MongoDBOplogSource {

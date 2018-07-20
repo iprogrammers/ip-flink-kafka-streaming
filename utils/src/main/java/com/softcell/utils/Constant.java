@@ -28,6 +28,11 @@ public class Constant {
     public static final String META_FILENAME = "join_meta.json";
     public static final String META_DIRECTORY = "metadata";
 
+    public static final String KAFKA_TOPIC = "helloworld.t";
+    public static final String ZOOKEEPER_PORT = "2181";
+    public static final int KAFKA_PRODUCER_PORT = 9092;
+    public static final String ZOOKEEPER_IP = "localhost";
+
     private Constant() {
         throw new IllegalStateException("Constant class");
     }
