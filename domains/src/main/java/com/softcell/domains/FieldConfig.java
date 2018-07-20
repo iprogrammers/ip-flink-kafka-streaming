@@ -8,7 +8,7 @@ public class FieldConfig {
     private String actualParameter;
     private String collectionName;
     private String expression;
-    private int index;
+    private Integer index;
     private boolean isExpressionEnabled;
     private boolean isPrimaryKey;
     private boolean isForeignKey;

@@ -3,6 +3,7 @@ package com.softcell.streaming.flink;
 
 import com.mongodb.BasicDBObject;
 import com.softcell.domains.Oplog;
+import com.softcell.rest.service.StreamingConfigService;
 import com.softcell.streaming.kafka.KafkaEventOplogSchema;
 import com.softcell.streaming.kafka.KafkaUtil;
 import com.softcell.streaming.source.MongoDBOplogSource;
@@ -38,7 +39,7 @@ public class StreamingOperations {
     public static final int KAFKA_PRODUCER_PORT = 9092;
     public static final String ZOOKEEPER_IP = "localhost";
     static int count = 0;
-    private final Logger logger = LoggerFactory.getLogger(StreamingOperations.class);
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
     MongoSink mongoSink;
@@ -51,7 +52,7 @@ public class StreamingOperations {
 
     static int getNumberOfPartitions() {
         try (KafkaUtil kafkaTopicService = new KafkaUtil(ZOOKEEPER_IP + ":" + ZOOKEEPER_PORT, ZOOKEEPER_IP, KAFKA_PRODUCER_PORT, 6000, 6000)) {
-//        kafkaTopicService.createOrUpdateTopic(KAFKA_TOPIC, 1, 10);
+/*        kafkaTopicService.createOrUpdateTopic(KAFKA_TOPIC, 1, 10);*/
             return kafkaTopicService.getNumPartitionsForTopic(KAFKA_TOPIC);
         } catch (Exception e) {
             return 0;
@@ -110,6 +111,8 @@ public class StreamingOperations {
                 FlinkKafkaConsumer010 kafkaConsumer = new FlinkKafkaConsumer010(KAFKA_TOPIC, new KafkaEventOplogSchema(), properties);
 
                 kafkaConsumer.assignTimestampsAndWatermarks(new BoundedOutOfOrdernessGenerator());
+
+                logger.debug("metadata: {}", StreamingConfigService.streamingConfigMeta);
 
                 DataStream<Oplog> streamSource = env
                         .addSource(kafkaConsumer)

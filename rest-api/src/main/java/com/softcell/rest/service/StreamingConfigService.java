@@ -1,12 +1,14 @@
 package com.softcell.rest.service;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.softcell.domains.JavaScript;
 import com.softcell.domains.StreamingConfig;
 import com.softcell.domains.response.Response;
 import com.softcell.persistance.StreamingOperationsRepository;
 import com.softcell.rest.utils.Utils;
 import com.softcell.utils.Constant;
+import com.softcell.utils.URLEndPoints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,12 +24,19 @@ import java.util.Set;
 @Service
 public class StreamingConfigService {
 
+    public static final Map<String, Map> streamingConfigMeta = new HashMap();
+
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
     StreamingOperationsRepository streamingOperationsRepository;
 
+    @Autowired
+    ObjectMapper objectMapper;
+
     public Response getCollectionNames() {
+
+        logger.debug("Method Name: [{}]", URLEndPoints.GET_COLLECTION_NAMES);
 
         Response.Builder builder = new Response.Builder();
 
@@ -58,6 +67,8 @@ public class StreamingConfigService {
 
     public Response getFieldsFromCollection(String collectionName) {
 
+        logger.debug("Method Name: [{}] Request:  [{}] ", URLEndPoints.GET_COLLECTION_FIELDS, collectionName);
+
         Response.Builder builder = new Response.Builder();
 
         try {
@@ -76,6 +87,8 @@ public class StreamingConfigService {
     }
 
     public Response createStreamingConfig(StreamingConfig streamingConfig) {
+
+        logger.debug("Method Name: [{}] Request:  [{}] ", URLEndPoints.GET_COLLECTION_FIELDS, streamingConfig);
 
         Response.Builder builder = new Response.Builder();
 
@@ -101,9 +114,17 @@ public class StreamingConfigService {
 
     public Response updateStreamingConfig(StreamingConfig streamingConfig) {
 
+        logger.debug("Method Name: [{}] Request:  [{}] ", URLEndPoints.GET_COLLECTION_FIELDS, streamingConfig);
+
         Response.Builder builder = new Response.Builder();
 
         try {
+
+            String isValidRelationship = streamingOperationsRepository.isValidRelationshipExists(streamingConfig);
+
+            if (!isValidRelationship.equals(Constant.SUCCESS)) {
+                return Utils.getFailedResponseStatus(builder, isValidRelationship);
+            }
 
             streamingOperationsRepository.updateStreamingConfig(streamingConfig);
             return Utils.getSuccessResponseWithData(builder, streamingConfig);
@@ -115,6 +136,8 @@ public class StreamingConfigService {
     }
 
     public Response getStreamingConfigDetails(String id) {
+
+        logger.debug("Method Name: [{}] Request:  [{}] ", URLEndPoints.GET_COLLECTION_FIELDS, id);
 
         Response.Builder builder = new Response.Builder();
 
@@ -133,8 +156,9 @@ public class StreamingConfigService {
         }
     }
 
-
     public Response getStreamingConfigList() {
+
+        logger.debug("Method Name: [{}] ", URLEndPoints.GET_COLLECTION_FIELDS);
 
         Response.Builder builder = new Response.Builder();
 
@@ -155,6 +179,8 @@ public class StreamingConfigService {
 
     public Response testJavascript(JavaScript script) {
 
+        logger.debug("Method Name: [{}] Request:  [{}] ", URLEndPoints.GET_COLLECTION_FIELDS, script);
+
         Response.Builder builder = new Response.Builder();
 
         try {
@@ -168,7 +194,8 @@ public class StreamingConfigService {
 
         } catch (Exception ex) {
             logger.error(HttpStatus.FAILED_DEPENDENCY.name(), ex);
-            return Utils.getFailedResponseStatus(builder,ex.getMessage());
+            return Utils.getFailedResponseStatus(builder, ex.getMessage());
         }
     }
+
 }

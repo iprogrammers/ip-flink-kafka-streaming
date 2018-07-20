@@ -9,16 +9,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.event.EventListener;
 import org.springframework.data.mongodb.config.EnableMongoAuditing;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
 
 
 @SpringBootApplication
@@ -26,8 +22,6 @@ import java.util.Map;
 @EnableAutoConfiguration
 @EnableMongoAuditing
 public class Application {
-
-    Map<String,Map<String,Map>> streamingConfigMetadata=new HashMap<>();
 
     public static void main(String[] args) {
 
@@ -44,11 +38,9 @@ public class Application {
     @Bean
     public CorsFilter corsFilter() {
 
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 
         CorsConfiguration config = new CorsConfiguration();
-
 
         config.setAllowedMethods(Arrays.asList("GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"));
 
@@ -57,6 +49,7 @@ public class Application {
         source.registerCorsConfiguration("/**", config);
 
         return new CorsFilter(source);
+
     }
 
 

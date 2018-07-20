@@ -4,10 +4,9 @@ package com.softcell.persistance;
 import com.mongodb.BasicDBObject;
 import com.softcell.domains.FieldConfig;
 import com.softcell.domains.StreamingConfig;
+import com.softcell.persistance.utils.RepositoryHelper;
 import com.softcell.utils.Constant;
-import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
-import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
@@ -26,7 +25,6 @@ import static org.springframework.data.mongodb.core.aggregation.Aggregation.unwi
 @Repository
 public class StreamingOperationsRepository {
 
-    private static final String FIELD_SEPERATOR = ".";
 
     @Autowired
     MongoTemplate mongoTemplate;
@@ -43,93 +41,11 @@ public class StreamingOperationsRepository {
 
         Map<String, String> keyValues = new LinkedHashMap();
 
-        getKeyValuesFromDocument("", dbObject, keyValues);
+        RepositoryHelper.getKeyValuesFromDocument("", dbObject, keyValues);
 
         return keyValues;
     }
 
-    void getKeyValuesFromDocument(String prefix, Document dbObject, Map<String, String> keyValues) {
-
-        boolean isInitialIteration = true;
-
-        if (StringUtils.isNotEmpty(prefix))
-            isInitialIteration = false;
-
-        if (dbObject != null) {
-
-            Set<String> keyset = dbObject.keySet();
-
-            if (keyset != null && keyset.contains("_class")) {
-                keyset.remove("_class");
-            }
-
-            for (String key : keyset) {
-
-                if (isInitialIteration)
-                    prefix = "";
-
-                if (StringUtils.isNotEmpty(prefix) && !prefix.endsWith(FIELD_SEPERATOR))
-                    prefix = prefix + FIELD_SEPERATOR;
-
-                if (StringUtils.isNotEmpty(key)) {
-
-                    Object value = dbObject.get(key);
-
-                    String type = getType(value);
-
-                    if (!type.equals(Constant.OBJECT)) {
-                        keyValues.put(prefix + key, type);
-                    }
-
-                    if (value instanceof Document) {
-
-                        if (StringUtils.isNotEmpty(prefix) && !prefix.endsWith(FIELD_SEPERATOR))
-                            prefix = prefix + FIELD_SEPERATOR;
-
-                        getKeyValuesFromDocument(prefix + key + FIELD_SEPERATOR, (Document) value, keyValues);
-
-                    } else if (value instanceof List) {
-
-                        List arrDocuments = ((List) value);
-
-                        for (int i = 0; i < arrDocuments.size(); i++) {
-
-                            if (arrDocuments.get(i) instanceof Document) {
-
-                                if (i == 0) {
-
-                                    if (StringUtils.isNotEmpty(prefix) && !prefix.endsWith(FIELD_SEPERATOR))
-                                        prefix = prefix + FIELD_SEPERATOR;
-
-                                }
-
-                                getKeyValuesFromDocument(prefix + key + FIELD_SEPERATOR, (Document) arrDocuments.get(i), keyValues);
-                            }
-                        }
-                    }
-
-                }
-
-            }
-
-        }
-
-    }
-
-
-    String getType(Object value) {
-        if (value == null || value.equals("") || value instanceof String)
-            return Constant.STRING;
-        else if (value instanceof Double || value instanceof Integer || value instanceof Long)
-            return Constant.INT;
-        else if (value instanceof Date)
-            return Constant.DATE;
-        else if (value instanceof Boolean)
-            return Constant.BOOLEAN;
-        else if (value instanceof ObjectId)
-            return Constant.OBJECT_ID;
-        else return Constant.OBJECT;
-    }
 
     public void saveStreamingConfig(StreamingConfig streamingConfig) {
         mongoTemplate.save(streamingConfig);
@@ -163,31 +79,16 @@ public class StreamingOperationsRepository {
 
     public String isValidRelationshipExists(StreamingConfig streamingConfig) {
 
-        if (streamingConfig.getFields() != null && streamingConfig.getFields().size() > 1 && streamingConfig.getFields().containsKey(streamingConfig.getName()))
-            streamingConfig.getFields().remove(streamingConfig.getName());
-
-        int numberOfCollections = streamingConfig.getFields().size();
+        int numberOfCollections = RepositoryHelper.getNumberOfCollections(streamingConfig);
 
         if (numberOfCollections <= 1)
             return Constant.SUCCESS;
 
-        FieldConfig primaryCollection = null;
-
         List<FieldConfig> foreignKeys = new ArrayList<>();
 
-        for (Map.Entry<String, List<FieldConfig>> entry : streamingConfig.getFields().entrySet()) {
+        FieldConfig primaryCollectionField = RepositoryHelper.getPrimaryAndForeignKeysFromConfig(streamingConfig, foreignKeys);
 
-            Optional<FieldConfig> primaryCollectionOptional = entry.getValue().stream().filter(FieldConfig::isPrimaryKey).findFirst();
-
-            Optional<FieldConfig> foreignCollectionOptional = entry.getValue().stream().filter(FieldConfig::isForeignKey).findFirst();
-
-            if (primaryCollectionOptional.isPresent())
-                primaryCollection = primaryCollectionOptional.get();
-            else if (foreignCollectionOptional.isPresent())
-                foreignKeys.add(foreignCollectionOptional.get());
-        }
-
-        if (primaryCollection == null)
+        if (primaryCollectionField == null)
             return Constant.PRIMARY_KEY_NOT_FOUND_EXCEPTION;
 
         if (foreignKeys.size() != numberOfCollections - 1)
@@ -201,7 +102,7 @@ public class StreamingOperationsRepository {
 
             lookupOperation = LookupOperation.newLookup().
                     from(fieldConfig.getCollectionName()).
-                    localField(primaryCollection.getActualParameter()).
+                    localField(primaryCollectionField.getActualParameter()).
                     foreignField(fieldConfig.getActualParameter()).
                     as(fieldConfig.getCollectionName());
 
@@ -217,7 +118,7 @@ public class StreamingOperationsRepository {
 
         Aggregation aggregation = Aggregation.newAggregation(lookupOperationList);
 
-        List<BasicDBObject> basicDBObjectList = mongoTemplate.aggregate(aggregation, primaryCollection.getCollectionName(), BasicDBObject.class).getMappedResults();
+        List<BasicDBObject> basicDBObjectList = mongoTemplate.aggregate(aggregation, primaryCollectionField.getCollectionName(), BasicDBObject.class).getMappedResults();
 
         if (!CollectionUtils.isEmpty(basicDBObjectList))
             return Constant.SUCCESS;
@@ -225,7 +126,15 @@ public class StreamingOperationsRepository {
             return Constant.INVALID_RELATIONSHIP_EXCEPTION;
     }
 
+
     public List<StreamingConfig> getStreamingConfigList() {
         return mongoTemplate.findAll(StreamingConfig.class);
     }
+
+
+    public Map<String, Map> getMeta() {
+        return mongoTemplate.findOne(new Query(), Map.class, "streamingMeta");
+    }
+
+
 }

@@ -5,16 +5,12 @@ import com.softcell.domains.JavaScript;
 import com.softcell.domains.StreamingConfig;
 import com.softcell.domains.response.Response;
 import com.softcell.rest.service.StreamingConfigService;
-
 import com.softcell.utils.Constant;
 import com.softcell.utils.URLEndPoints;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping(value = Constant.REPORTS)
@@ -33,7 +29,7 @@ public class StreamingConfigController {
         return new ResponseEntity(streamingConfigService.getFieldsFromCollection(collectionName), HttpStatus.OK);
     }
 
-    @PostMapping(URLEndPoints.CREATE_STREAMING_CONFIG)
+    @PostMapping(URLEndPoints.SAVE_STREAMING_CONFIG)
     public ResponseEntity<Response> createStreamingCofig(@RequestBody StreamingConfig streamingConfig) {
         return new ResponseEntity(streamingConfigService.createStreamingConfig(streamingConfig), HttpStatus.OK);
     }
@@ -48,7 +44,7 @@ public class StreamingConfigController {
         return new ResponseEntity(streamingConfigService.getStreamingConfigList(), HttpStatus.OK);
     }
 
-    @PostMapping(URLEndPoints.UPDATE_STREAMING_CONFIG)
+    @PutMapping(URLEndPoints.UPDATE_STREAMING_CONFIG)
     public ResponseEntity<Response> updateStreamingCofig(@RequestBody StreamingConfig streamingConfig) {
         return new ResponseEntity(streamingConfigService.updateStreamingConfig(streamingConfig), HttpStatus.OK);
     }
@@ -56,13 +52,6 @@ public class StreamingConfigController {
     @PostMapping(URLEndPoints.TEST_JAVASCRIPT)
     public ResponseEntity<Response> testJavascript(@RequestBody JavaScript script) {
         return new ResponseEntity(streamingConfigService.testJavascript(script), HttpStatus.OK);
-    }
-
-
-    @PostMapping("test")
-    public void testmethod(@RequestBody Map<String,Map> streamingConfigMetadata) {
-        System.out.println("request:"+ streamingConfigMetadata);
-        //return new ResponseEntity(streamingConfigService.testJavascript(script), HttpStatus.OK);
     }
 
 }
