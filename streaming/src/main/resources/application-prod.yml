@@ -3,7 +3,7 @@ server:
   compression:
     enabled: true
     mime-types: application/json,application/xml,text/html,text/xml,text/plain,application/octet-stream
-  port: 8084
+  port: 8082
 # mongodb specific properties
 
 spring:
@@ -11,8 +11,8 @@ spring:
     mongodb:
       uri: mongodb://localhost:27017/gonogo_analytics_config
       database: gonogo_analytics_config
-      baseuri: mongodb://localhost:27017/
-  profiles: default
+      baseuri: mongodb://localhost:27017
+  profiles: prod
 
 kafka:
   bootstrap-servers: localhost:9092
@@ -22,10 +22,4 @@ kafka:
 zookeeper:
   ip: localhost
   port: 2181
-logging:
-    level:
-        org.springframework.web: DEBUG
-        com.softcell.*: DEBUG
-flink:
-  webui:
-    port: 8089
+

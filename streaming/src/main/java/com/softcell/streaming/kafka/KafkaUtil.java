@@ -1,15 +1,12 @@
 package com.softcell.streaming.kafka;
 
-
 import com.softcell.streaming.utils.ZkStringSerializer;
 import kafka.admin.AdminUtils;
 import kafka.admin.BrokerMetadata;
-
 import kafka.javaapi.TopicMetadata;
 import kafka.javaapi.TopicMetadataRequest;
 import kafka.javaapi.TopicMetadataResponse;
 import kafka.javaapi.consumer.SimpleConsumer;
-
 import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
 import org.slf4j.Logger;
@@ -22,10 +19,10 @@ import java.io.IOException;
 import java.util.Arrays;
 
 public class KafkaUtil implements Closeable {
-    private final static int CONSUMER_TIMEOUT = 100000;
-    private final static int CONSUMER_BUFFER_SIZE = 64 * 1024;
-    private final static String CONSUMER_CLIENT_ID = "leaderLookup";
-    private final Logger LOGGER = LoggerFactory.getLogger(this.getClass().getName());
+    private static final int CONSUMER_TIMEOUT = 100000;
+    private static final int CONSUMER_BUFFER_SIZE = 64 * 1024;
+    private static final String CONSUMER_CLIENT_ID = "leaderLookup";
+    private static final Logger LOGGER = LoggerFactory.getLogger(KafkaUtil.class);
     private final ZkClient zkClient;
     private final SimpleConsumer simpleConsumer;
 
@@ -50,7 +47,6 @@ public class KafkaUtil implements Closeable {
             LOGGER.debug("Creating topic " + topic + " with replication " + replicationFactor + " and " + partitions
                     + " partitions");
 
-        //Seq<Object> brokerList = ZkUtils.getSortedBrokerList(zkClient);
         ZkUtils utils = ZkUtils.apply(zkClient, false);
 
         Seq<BrokerMetadata> brokerMeta = AdminUtils.getBrokerMetadatas(utils, AdminUtils.getBrokerMetadatas$default$2(), AdminUtils.getBrokerMetadatas$default$3());
@@ -78,18 +74,11 @@ public class KafkaUtil implements Closeable {
                 return partitionSize;
             }
         }
-        LOGGER.warn("Metadata info not found!. TOPIC " + topic);
+        LOGGER.warn("Metadata info not found!. TOPIC {}" , topic);
         return null;
     }
 
-    public void deleteTopics() {
-        //zkClient.deleteRecursive("/brokers/topics");
-    }
-
     public void close() throws IOException {
-     //   zkClient.close();
-
-//        zkClient.close();
         simpleConsumer.close();
     }
 }

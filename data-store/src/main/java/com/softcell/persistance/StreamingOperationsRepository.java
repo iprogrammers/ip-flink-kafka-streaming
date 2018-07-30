@@ -2,11 +2,15 @@ package com.softcell.persistance;
 
 
 import com.mongodb.BasicDBObject;
+import com.softcell.domains.CustomerMIS;
 import com.softcell.domains.FieldConfig;
 import com.softcell.domains.StreamingConfig;
-import com.softcell.persistance.utils.RepositoryHelper;
+import com.softcell.persistance.helper.RepositoryHelper;
 import com.softcell.utils.Constant;
+import com.softcell.utils.FieldName;
 import org.bson.Document;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
@@ -25,6 +29,7 @@ import static org.springframework.data.mongodb.core.aggregation.Aggregation.unwi
 @Repository
 public class StreamingOperationsRepository {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(StreamingOperationsRepository.class);
 
     @Autowired
     MongoTemplate mongoTemplate;
@@ -51,23 +56,34 @@ public class StreamingOperationsRepository {
         mongoTemplate.save(streamingConfig);
     }
 
-    public void updateStreamingConfig(StreamingConfig streamingConfig) {
+    public StreamingConfig updateStreamingConfig(StreamingConfig streamingConfig, boolean isUpdateStatus) {
 
         StreamingConfig existingRecord = getStreamingConfigDetails(streamingConfig.getId());
 
         if (existingRecord != null) {
-            String id = existingRecord.getId();
-            long version = existingRecord.getVersion();
-            existingRecord = streamingConfig;
-            existingRecord.setId(id);
-            existingRecord.setVersion(version);
-            saveStreamingConfig(streamingConfig);
-        }
+
+            if (isUpdateStatus) {
+                existingRecord.setStatus(streamingConfig.getStatus());
+            } else {
+                String id = existingRecord.getId();
+                long version = existingRecord.getVersion();
+                existingRecord = streamingConfig;
+                existingRecord.setId(id);
+                existingRecord.setVersion(version);
+            }
+
+            existingRecord.setPersisted(true);
+
+            saveStreamingConfig(existingRecord);
+            return existingRecord;
+        } else
+            return null;
     }
+
 
     public StreamingConfig getStreamingConfigDetails(String id) {
         Query query = new Query();
-        query.addCriteria(Criteria.where(Constant.DOCUMENT_ID).is(id));
+        query.addCriteria(Criteria.where(FieldName.DOCUMENT_ID).is(id));
         return mongoTemplate.findOne(query, StreamingConfig.class, "streamingConfig");
     }
 
@@ -126,15 +142,49 @@ public class StreamingOperationsRepository {
             return Constant.INVALID_RELATIONSHIP_EXCEPTION;
     }
 
-
     public List<StreamingConfig> getStreamingConfigList() {
         return mongoTemplate.findAll(StreamingConfig.class);
     }
 
+    public Map getStreamingConfigList(Query query) {
 
-    public Map<String, Map> getMeta() {
-        return mongoTemplate.findOne(new Query(), Map.class, "streamingMeta");
+        int limit = query.getLimit();
+        long totalRecords = 0;
+        Map hashMap = new HashMap();
+        query.limit(0);
+
+        try {
+            totalRecords = mongoTemplate.count(query, StreamingConfig.class);
+        } catch (Exception ex) {
+            LOGGER.error("Please contact service provide" + ex.getMessage());
+        }
+
+        query.limit(limit);
+
+        try {
+
+            List<StreamingConfig> streamingConfigList = mongoTemplate.find(query, StreamingConfig.class);
+            hashMap.put("total", totalRecords);
+            hashMap.put("data", streamingConfigList);
+            return hashMap;
+
+        } catch (Exception ex) {
+            LOGGER.error("Exception : Please contact Service provider", ex);
+        }
+
+        return hashMap;
+
     }
 
+    public boolean saveRelationTemplate(CustomerMIS customerMIS) {
+
+        if (customerMIS.getCustomerMISMaster() != null)
+            mongoTemplate.save(customerMIS.getCustomerMISMaster());
+        if (customerMIS.getCustomerMISChild1() != null)
+            mongoTemplate.save(customerMIS.getCustomerMISChild1());
+        if (customerMIS.getCustomerMISChild2() != null)
+            mongoTemplate.save(customerMIS.getCustomerMISChild2());
+        return true;
+    }
 
 }

@@ -6,34 +6,35 @@ import com.softcell.domains.Oplog;
 import com.softcell.rest.service.StreamingConfigService;
 import com.softcell.streaming.kafka.KafkaEventOplogSchema;
 import com.softcell.streaming.kafka.KafkaUtil;
-import com.softcell.streaming.source.MongoDBOplogSource;
-import com.softcell.streaming.source.MongoSink;
+import com.softcell.streaming.oplog.MongoDBOplogSource;
+import com.softcell.streaming.oplog.MongoSink;
 import com.softcell.streaming.utils.BoundedOutOfOrdernessGenerator;
 import com.softcell.utils.Constant;
-import org.apache.flink.api.common.functions.MapFunction;
+import com.softcell.utils.FieldName;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer010;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumerBase;
+import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.java.StreamTableEnvironment;
+import org.apache.flink.types.Row;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
-
-import static com.softcell.utils.Constant.*;
 
 @Service
 public class StreamingOperations {
@@ -41,20 +42,38 @@ public class StreamingOperations {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
-    MongoSink mongoSink;
+    private MongoSink mongoSink;
 
-    @Autowired
-    MongoTemplate mongoTemplate;
+    @Value("${kafka.topic}")
+    private String kafkaTopic;
+
+    @Value("${kafka.port}")
+    private int kafkaPort;
+
+    @Value("${kafka.group-id}")
+    private String kafkaGroupId;
+
+    @Value("${zookeeper.ip}")
+    private String zookeeperIp;
+
+    @Value("${zookeeper.port}")
+    private String zookeeperPort;
 
     @Value("${spring.data.mongodb.database}")
-    private String mongoDbName;
+    private String databaseName;
 
-    static int getNumberOfPartitions() {
-        try (KafkaUtil kafkaTopicService = new KafkaUtil(ZOOKEEPER_IP + ":" + ZOOKEEPER_PORT, ZOOKEEPER_IP, KAFKA_PRODUCER_PORT, 6000, 6000)) {
+    @Value("${kafka.bootstrap-servers}")
+    private String bootstrapServers;
+
+    @Value("${flink.webui.port}")
+    private int flinkWebUIPort;
+
+    int getNumberOfPartitions() {
+        try (KafkaUtil kafkaTopicService = new KafkaUtil(zookeeperIp + ":" + zookeeperPort, zookeeperIp, kafkaPort, 6000, 6000)) {
 /*        kafkaTopicService.createOrUpdateTopic(KAFKA_TOPIC, 1, 10);*/
-            return kafkaTopicService.getNumPartitionsForTopic(KAFKA_TOPIC);
+            return kafkaTopicService.getNumPartitionsForTopic(kafkaTopic);
         } catch (Exception e) {
-            return 0;
+            return 1;
         }
     }
 
@@ -91,105 +110,86 @@ public class StreamingOperations {
             @Override
             public void run() {
 
+                logger.debug("Running Flink Application");
                 Configuration config = new Configuration();
                 config.setBoolean(ConfigConstants.LOCAL_START_WEBSERVER, true);
 
-                StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(config);
+                config.setInteger(RestOptions.PORT, flinkWebUIPort);
 
+                StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(config);
+                env.setParallelism(getNumberOfPartitions());
                 env.enableCheckpointing(5000);
                 env.getConfig().disableSysoutLogging();
                 env.getConfig().setRestartStrategy(RestartStrategies.fixedDelayRestart(4, 10000));
                 env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
                 Properties properties = new Properties();
-                properties.setProperty("bootstrap.servers", "localhost:9092");
-                properties.setProperty("zookeeper.connect", "localhost:2181");
-                properties.setProperty("group.id", "helloworld");
+                properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+                properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, kafkaGroupId);
                 properties.setProperty(FlinkKafkaConsumerBase.KEY_PARTITION_DISCOVERY_INTERVAL_MILLIS, "60000");
 
-                FlinkKafkaConsumer010 kafkaConsumer = new FlinkKafkaConsumer010(KAFKA_TOPIC, new KafkaEventOplogSchema(), properties);
-
+                FlinkKafkaConsumer010 kafkaConsumer = new FlinkKafkaConsumer010(kafkaTopic, new KafkaEventOplogSchema(), properties);
                 kafkaConsumer.assignTimestampsAndWatermarks(new BoundedOutOfOrdernessGenerator());
 
-                logger.debug("metadata: {}", StreamingConfigService.streamingConfigMeta);
+                logger.debug("metadata: {}", StreamingConfigService.STREAMING_CONFIG_META);
 
-
-                List list=new ArrayList();
-                if (list.contains("")){
-
-                }
                 DataStream<Oplog> streamSource = env
-                        .addSource(kafkaConsumer)
-                        .setParallelism(10).map(new MapFunction<Oplog, Oplog>() {
-                            @Override
-                            public Oplog map(Oplog oplog) throws Exception {
+                        .addSource(kafkaConsumer);
 
-                                /*if (oplog.getNs().equals("gonogo_analytics_config.goNoGoCustomerApplication")) {
-                                    oplog.setPrimaryKey(oplog.getO().getString("_id"));
-                                } else*/
+                StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
 
-                                if (oplog.getNs().equals("analyticDB.customerMISMaster")) {
-                                    oplog.setPrimaryKey(oplog.getO().getString(Constant.LOAN_APPLICATION_ID));
-                                } else if (oplog.getNs().equals("analyticDB.customerMISChild1")) {
-                                    oplog.setForeignKey(oplog.getO().getString(Constant.LOAN_APPLICATION_ID));
-                                } else if (oplog.getNs().equals("analyticDB.customerMISChild2")) {
-                                    oplog.setForeignKey(oplog.getO().getString(Constant.LOAN_APPLICATION_ID));
-                                }
-                                return oplog;
-                            }
-                        });
+                // register the function
+                tableEnv.registerFunction("accessBasicDBObject", new AccessBasicDBObject());
+                Table table1 = tableEnv.fromDataStream(streamSource);
 
-               /* StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
-
-                Table table1 = tableEnv.fromDataStream(streamSource);*/
-/*
-                Table customerMISMaster = table1.filter("ns === 'analyticDB.customerMISMaster'").select("o as master, primaryKey");
-                Table customerMISChild1 = table1.filter("ns === 'analyticDB.customerMISChild1'").select("o  as child1, foreignKey");
-                Table customerMISChild2 = table1.filter("ns === 'analyticDB.customerMISChild2'").select("o  as child2, foreignKey as foreignKey2");
+                Table customerMISMaster = table1.filter("ns === '" + databaseName + "." + "customerMISMaster'").select("accessBasicDBObject(o,'loanApplicationId') as primaryKey, o as master ");
+                Table customerMISChild1 = table1.filter("ns === '" + databaseName + "." + "customerMISChild1'").select("accessBasicDBObject(o,'loanApplicationId') as foreignKey, o  as child1");
+                Table customerMISChild2 = table1.filter("ns === '" + databaseName + "." + "customerMISChild2'").select("accessBasicDBObject(o,'loanApplicationId') as foreignKey2, o as child2");
 
                 Table result = customerMISMaster.join(customerMISChild1).where("primaryKey==foreignKey").join(customerMISChild2).where("primaryKey==foreignKey2");
 
-                DataStream<Row> rowDataStream = tableEnv.toDataStream(result, Row.class);
+                DataStream<Row> rowDataStream = tableEnv.toAppendStream(result, Row.class);
 
-                DataStream<BasicDBObject> printStream = rowDataStream.map(new MapFunction<Row, BasicDBObject>() {
-                    @Override
-                    public BasicDBObject map(Row row) throws Exception {
+                DataStream<BasicDBObject> printStream = rowDataStream.map((Row row) -> {
+                    BasicDBObject basicDBObject = new BasicDBObject();
 
-                        BasicDBObject basicDBObject = new BasicDBObject();
-                        for (int count = 0; count < row.getArity(); count = count + 2) {
+                    for (int count = 1; count < row.getArity(); count = count + 2) {
+                        if (row.getField(count) instanceof BasicDBObject) {
+                            if (count > 1)
+                                ((BasicDBObject) row.getField(count)).remove(FieldName.DOCUMENT_ID);
                             basicDBObject.putAll(((BasicDBObject) row.getField(count)).toMap());
                         }
-
-                        basicDBObject.remove("_class");
-                        return basicDBObject;
                     }
+
+                    if (basicDBObject.get("_class") != null)
+                        basicDBObject.remove("_class");
+
+                    basicDBObject.put(Constant.DERIVED_CLASS_NAME, "customerMISTesting");
+
+                    return basicDBObject;
                 });
 
-                printStream.addSink(new MongoSink<BasicDBObject>());*/
+                printStream.addSink(mongoSink);
+                printStream.print();
 
+//                DataStream<BasicDBObject> gonogoCustomerApplicationStream = streamSource.map(Oplog::getO);
 
-//                DataStream<Oplog> rowDataStreamGonogo = tableEnv.toDataStream(table1, Oplog.class);
-
-                DataStream<BasicDBObject> gonogoCustomerApplicationStream = streamSource.map(new MapFunction<Oplog, BasicDBObject>() {
+             /*   DataStream<BasicDBObject> gonogoCustomerApplicationStream = streamSource.map(new MapFunction<Oplog, BasicDBObject>() {
                     @Override
                     public BasicDBObject map(Oplog oplog) throws Exception {
-                        return oplog.getO();
-
-                    }
-                });
-
-               /* DataStream<String> gonogoCustomerApplicationStream = streamSource.map(new MapFunction<Oplog, String>() {
-                    @Override
-                    public String map(Oplog oplog) throws Exception {
-                        count=count+1;
-                        BasicDBObject basicDBObject = oplog.getO();
-                        if (basicDBObject.getString("_id") != null)
-                            return count+"->"+basicDBObject.getString("_id");
-                        else return count+"---#######------";
+                        BasicDBObject basicDBObject=oplog.getO();
+                        basicDBObject.put(Constant.DERIVED_CLASS_NAME,"test");
+                        return basicDBObject;
                     }
                 });*/
 
-//                gonogoCustomerApplicationStream.print();
+
+                DataStream<BasicDBObject> gonogoCustomerApplicationStream = streamSource.map((Oplog oplog) -> {
+                    BasicDBObject basicDBObject = oplog.getO();
+                    basicDBObject.put(Constant.DERIVED_CLASS_NAME, "test");
+                    return basicDBObject;
+                });
+
                 gonogoCustomerApplicationStream.addSink(mongoSink);
 
                 try {

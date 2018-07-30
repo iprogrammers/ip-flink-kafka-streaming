@@ -1,26 +1,26 @@
-package com.softcell.streaming.source;
-
+package com.softcell.streaming.oplog;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.reactivestreams.client.MongoClients;
 import com.softcell.streaming.utils.MongoClientWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Component
 public class ShardSetFinder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ShardSetFinder.class);
 
-    @Autowired
-    MongoTemplate mongoTemplate;
+    @Value("${spring.data.mongodb.baseuri}")
+    private String mongoUri;
 
     public Map<String, List<MongoClientWrapper>> findShardSets() {
 
@@ -40,7 +40,7 @@ public class ShardSetFinder {
                 Thread.sleep(100); // allow the client to establish prior to being
             }
         } catch (InterruptedException ex) {
-            LOGGER.error(HttpStatus.FAILED_DEPENDENCY.name(),ex);
+            LOGGER.error(HttpStatus.FAILED_DEPENDENCY.name(), ex);
             // Restore interrupted state...
             Thread.currentThread().interrupt();
         }
@@ -49,7 +49,7 @@ public class ShardSetFinder {
 
     private List<ConnectionString> buildServerAddressList() {
         List<ConnectionString> hosts = new ArrayList<>();
-        hosts.add(new ConnectionString("mongodb://localhost:27017"));
+        hosts.add(new ConnectionString(mongoUri));
         return hosts;
     }
 

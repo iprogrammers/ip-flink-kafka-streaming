@@ -14,7 +14,7 @@ import java.util.List;
 @Component
 public class StreamingCache {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger LOGGER = LoggerFactory.getLogger(StreamingCache.class);
 
     @Autowired
     StreamingOperationsRepository streamingOperationsRepository;
@@ -25,7 +25,7 @@ public class StreamingCache {
     @PostConstruct
     public void initializeStreamingMeta() {
 
-        logger.debug("Method Name: [{}]", "initializeStreamingMeta");
+        LOGGER.debug("Method Name: [{}]", "initializeStreamingMeta");
 
         List<StreamingConfig> streamingConfigList = streamingOperationsRepository.getStreamingConfigList();
 

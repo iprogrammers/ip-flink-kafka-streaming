@@ -32,7 +32,7 @@ public class Response implements Serializable{
      * The errors.
      */
     @JsonProperty("errors")
-    private Collection<com.softcell.domains.response.Error> errors;
+    private Collection<Error> errors;
 
     @JsonProperty("error")
     private com.softcell.domains.response.Error error;
@@ -73,7 +73,7 @@ public class Response implements Serializable{
          * @param errors the errors
          * @return the builder
          */
-        public Builder errors(Collection<com.softcell.domains.response.Error> errors) {
+        public Builder errors(Collection<Error> errors) {
             this.baseResponse.setErrors(errors);
             return this;
         }

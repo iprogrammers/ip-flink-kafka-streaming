@@ -3,7 +3,6 @@ package com.softcell.streaming.utils;
 
 import com.softcell.domains.Oplog;
 import com.softcell.streaming.Application;
-
 import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
 import org.apache.flink.streaming.api.watermark.Watermark;
 

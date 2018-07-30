@@ -1,11 +1,11 @@
 package com.softcell.streaming.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.softcell.domains.Oplog;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.streaming.util.serialization.KeyedDeserializationSchema;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -15,7 +15,8 @@ public class KafkaEventOplogSchema  implements KeyedDeserializationSchema<Oplog>
 
     private static final long serialVersionUID = 6154188370181669758L;
 
-    private final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(this.getClass());
+    private static final transient Logger LOGGER = LoggerFactory.getLogger(KafkaEventOplogSchema.class);
+
     @Autowired
     ObjectMapper objectMapper;
 

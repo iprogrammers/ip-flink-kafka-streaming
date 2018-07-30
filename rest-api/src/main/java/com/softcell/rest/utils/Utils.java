@@ -7,7 +7,7 @@ import com.softcell.domains.response.Error;
 import com.softcell.domains.response.Payload;
 import com.softcell.domains.response.Response;
 import com.softcell.domains.response.Status;
-import com.softcell.persistance.utils.RepositoryHelper;
+import com.softcell.persistance.helper.RepositoryHelper;
 import com.softcell.rest.service.StreamingConfigService;
 import com.softcell.utils.Constant;
 import org.slf4j.Logger;
@@ -27,7 +27,8 @@ import java.util.Map;
 
 public class Utils {
 
-    private static final Logger logger = LoggerFactory.getLogger(Utils.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Utils.class);
+    private static final String COLLECTION_SEPERATOR = "##";
 
     private Utils() {
     }
@@ -72,12 +73,12 @@ public class Utils {
 
             Object result = inv.invokeFunction(javaScript.getMethodName(), javaScript.getParams());
 
-            logger.debug("result{}", result);
+            LOGGER.debug("result{}", result);
 
             return result;
 
         } catch (ScriptException | NoSuchMethodException ex) {
-            logger.error(HttpStatus.FAILED_DEPENDENCY.name(), ex);
+            LOGGER.error(HttpStatus.FAILED_DEPENDENCY.name(), ex);
 
         }
 
@@ -97,8 +98,9 @@ public class Utils {
         if (numberOfCollections > 1) {
             foreignKeys = new ArrayList<>();
             FieldConfig primaryCollectionField = RepositoryHelper.getPrimaryAndForeignKeysFromConfig(streamingConfig, foreignKeys);
+            String collectionName = getStreamingMetaName(primaryCollectionField, foreignKeys);
             if (primaryCollectionField != null && !CollectionUtils.isEmpty(foreignKeys))
-                getMetaFromKeys(streamingConfig.getName(), foreignKeys, primaryCollectionField, StreamingConfigService.streamingConfigMeta);
+                getMetaFromKeys(collectionName, foreignKeys, primaryCollectionField, StreamingConfigService.STREAMING_CONFIG_META);
         }
 
     }
@@ -126,5 +128,22 @@ public class Utils {
         metadata.put(destCollectionName, parentMeta);
 
         return metadata;
+    }
+
+    private static String getStreamingMetaName(FieldConfig primaryCollectionField, List<FieldConfig> foreignKeys) {
+
+        StringBuilder stringBuilder = new StringBuilder();
+        appendPrefixAndSuffix(stringBuilder, primaryCollectionField.getCollectionName());
+
+        for (FieldConfig fieldConfig : foreignKeys) {
+            appendPrefixAndSuffix(stringBuilder, fieldConfig.getCollectionName());
+        }
+        return stringBuilder.toString();
+    }
+
+    private static void appendPrefixAndSuffix(StringBuilder stringBuilder, String collectionName) {
+        stringBuilder.append(COLLECTION_SEPERATOR);
+        stringBuilder.append(collectionName);
+        stringBuilder.append(COLLECTION_SEPERATOR);
     }
 }

@@ -1,4 +1,4 @@
-package com.softcell.persistance.utils;
+package com.softcell.persistance.helper;
 
 import com.softcell.domains.FieldConfig;
 import com.softcell.domains.StreamingConfig;

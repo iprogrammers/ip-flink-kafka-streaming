@@ -10,6 +10,7 @@ import java.io.Serializable;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Oplog implements Serializable{
 
+    private static final long serialVersionUID = 1905122041950251222L;
     private OplogTimestamp ts;
     private String op;
     private String primaryKey;

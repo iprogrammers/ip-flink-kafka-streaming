@@ -11,7 +11,7 @@ import java.util.Map;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class StreamingConfig extends AuditEntity{
+public class StreamingConfig extends AuditEntity {
 
     @Id
     private String id;
@@ -24,5 +24,9 @@ public class StreamingConfig extends AuditEntity{
     private Map<String, List<FieldConfig>> fields;
 
     private String customFunctions;
+
+    private Boolean status;
+
+    private String jobStatus;
 
 }
